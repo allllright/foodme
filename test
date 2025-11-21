@@ -1,150 +1,52 @@
-1. Purpose & Scope
-
-Demonstrate New Relic-based SLI/SLO tracking and error-budget burn using a real application.
-
-Deploy Foodme (Node.js demo app) on AWS EC2 via Terraform.
-
-Instrument with New Relic APM, Infra, Logs, and Synthetics.
-
-Generate good/bad traffic to validate error budget behavior.
-
-
-
----
-
-2. Architecture Summary
-
-AWS EC2 (Ubuntu): runs Foodme using PM2.
-
-Terraform IaC: EC2 + SG + IGW + Route table + key pair + user_data bootstrap.
-
-New Relic: Node agent, Infrastructure agent, service levels, synthetic monitor.
-
-Traffic Generator: Python script simulating normal and failing requests.
-
-SLIs: App success rate + Synthetic availability.
-
-
-
----
-
-3. Deployment Steps (High Level)
-
-3.1 Terraform Deployment
-
-Generate SSH key → EC2 key_pair.
-
-Create SG: port 22 (IP-restricted), port 3000 (public).
-
-Create VPC connectivity (IGW + route table).
-
-Provision EC2 with user_data: install Node, clone repo, write .env, start app with PM2.
-
-
-3.2 Application Setup
-
-Foodme clone from GitHub (your fork).
-
-Node.js v18.x installed.
-
-.env loaded with NR license key & app name.
-
-PM2 runs the app (managed, restart on crash).
-
-
-3.3 New Relic Instrumentation
-
-Install Infra agent (via NR script).
-
-Add newrelic.js and require it in start.js.
-
-Validate APM + Logs + Host appear in NR.
-
-
-3.4 Synthetic User Journey
-
-Simple HTTP monitor hitting /health.
-
-Frequency: 1–5 mins.
-
-Used as availability SLI source.
-
-
-
----
-
-4. Service Levels & Error Budgets
-
-SLIs
-
-App success rate (APM → 2xx/4xx vs 5xx).
-
-Synthetic uptime.
-
-
-SLOs
-
-Typical target: 99% for 7 days.
-
-
-Error Budget
-
-Calculated automatically via New Relic service levels.
-
-Burn driven by bad traffic + synthetic failures.
-
-
-
-
----
-
-5. Traffic Generation Tests
-
-Good traffic script → repeated GETs.
-
-Bad traffic script → invalid IDs to trigger errors.
-
-Validate:
-
-APM error increase
-
-SLO drops
-
-Burn rate increases
-
-Synthetic remains stable/unstable depending on configuration
-
-
-
-
----
-
-6. Results & Observations
-
-SLO chart behavior confirmed
-
-Error budget burn reflects traffic patterns
-
-Synthetic availability integrated
-
-EC2/NR instrumentation works end-to-end
-
-Suggestions: improve tagging, automate teardown, add dashboards
-
-
-
----
-
-7. Appendix
-
-Include only essential artifacts:
-
-Terraform folder structure
-
-Key terraform files (main.tf, variables.tf, user_data.sh)
-
-New Relic config (newrelic.js)
-
-Traffic generator scripts
-
-Screenshots of SLOs, synthetic checks, app health
+You are assisting with an SRE task: creating severity (P-value) mappings for AWS Health events that come through Hermes into PagerDuty.
+
+### Task Context
+I will give you a list of AWS Health event rows in plain text.  
+Each row contains:
+- SERVICE  
+- EVENT TYPE CODE  
+- CATEGORY (issue / scheduledChange / accountNotification)
+
+Your job is to output a table that fills **three columns**:
+
+1. **P-value (PRODUCTION)**  
+2. **P-value (NON-PRODUCTION)**  
+3. **Description**  
+   - A short explanation of what the event generally means  
+   - Why the selected severities are appropriate  
+   - Keep it concise (1–2 sentences)
+
+### Severity Assignment Rules
+Follow these severity rules consistently:
+
+#### CATEGORY = issue
+- PROD: P1–P2 for critical infra (EC2, S3, ElastiCache, Cognito, API Gateway)  
+- PROD: P2–P3 for less critical events  
+- NON-PROD: P2–P3  
+→ Issue events are always higher severity.
+
+#### CATEGORY = scheduledChange
+- PROD: P3–P4  
+- NON-PROD: P5  
+→ Only impactful if the resource is PROD.
+
+#### CATEGORY = accountNotification
+- PROD: P4–P5  
+- NON-PROD: P5  
+→ Usually informational unless it impacts PROD users.
+
+#### Additional rules
+- PROD severity must always be >= NON-PROD severity  
+- Use judgment:  
+  - High-risk events → higher P-values  
+  - Low/no impact events → lower P-values  
+
+### Output Format
+Return ONLY a Markdown table with columns:
+
+| Service | EventTypeCode | Category | P (Prod) | P (Non-Prod) | Description |
+
+Do not add extra commentary.
+
+### Now wait for my input.
+I will paste the rows from my Excel next.
